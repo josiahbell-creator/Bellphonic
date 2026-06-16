@@ -603,7 +603,7 @@ async function callClaude(userPrompt,count){
 RULES: 1) Quality over popularity. 2) EXACTLY ${count} tracks. 3) Sequence intentionally by mood/energy/arc. 4) Every "why" must be specific and producer-aware — name the instrument, the producer, the moment. 5) ONLY valid JSON, no markdown, no text before or after.
 JSON: {"playlistTitle":"title","playlistSubtitle":"one sentence arc","totalRuntime":"e.g. 58 minutes","researchNote":"2-3 sentences for a serious digger","sources":["6-8 specific sources"],"tracks":[{"position":1,"title":"","artist":"","year":"","label":"","genre":"","country":"","energy":6,"discoveryScore":85,"why":"specific note","youtubeSearch":"Artist Title Year"}]}
 energy:1-10, discoveryScore:1-100 (100=extremely rare)`;
-  const resp=await fetch('https://corsproxy.io/?url=https%3A%2F%2Fapi.anthropic.com%2Fv1%2Fmessages',{
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     mode:'cors',
     headers:{
