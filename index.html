@@ -1,2 +1,738 @@
-# Bellphonic
-sample 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Bellphonic"/>
+<meta name="theme-color" content="#1A1A1A"/>
+<title>Bellphonic — Crate Digger</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231A1A1A'/><text y='.9em' font-size='70' x='15'>🎛</text></svg>"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --chassis:#1A1A1A;--panel:#242424;--panel2:#2E2E2E;--panel3:#363636;
+  --amber:#F5A623;--amber-dim:#7A5010;--amber-glow:rgba(245,166,35,.12);
+  --led:#52C41A;--cream:#D4CCBB;--cream2:#9A9080;
+  --pad:#1E1E1E;--pad-border:#3A3A3A;--white:#F0EBE1;--border:#333;
+}
+html,body{min-height:100%;background:var(--chassis);color:var(--cream);font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+.app{position:relative;z-index:1}
+
+/* ── API KEY GATE ─────────────────────────────────────────────────── */
+.api-gate{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:24px;
+}
+.api-gate-box{
+  background:var(--panel2);border:2px solid #111;border-radius:8px;
+  padding:36px 32px;width:100%;max-width:540px;
+  box-shadow:0 0 40px rgba(245,166,35,.08),0 20px 40px rgba(0,0,0,.5);
+}
+.gate-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--amber);letter-spacing:.06em;margin-bottom:6px;text-shadow:0 0 20px rgba(245,166,35,.4)}
+.gate-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber-dim);letter-spacing:.2em;text-transform:uppercase;margin-bottom:28px}
+.gate-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;display:block}
+.gate-input{
+  width:100%;background:#111;border:1px solid var(--border);border-radius:3px;
+  color:var(--amber);font-family:'IBM Plex Mono',monospace;font-size:14px;
+  padding:12px 14px;outline:none;letter-spacing:.06em;margin-bottom:14px;
+  transition:border-color .2s;
+}
+.gate-input:focus{border-color:var(--amber-dim)}
+.gate-input::placeholder{color:var(--amber-dim);opacity:.6}
+.gate-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);letter-spacing:.06em;line-height:1.7;margin-bottom:20px;opacity:.7}
+.gate-note a{color:var(--amber);text-decoration:none}
+.gate-note a:hover{text-decoration:underline}
+.gate-btn{
+  width:100%;background:var(--amber);color:#0A0A0A;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;
+  padding:13px;border:none;border-radius:3px;cursor:pointer;
+  transition:all .15s;box-shadow:0 2px 0 #7A5010;
+}
+.gate-btn:hover{background:#FFB940;transform:translateY(-1px)}
+.gate-error{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#FF8080;letter-spacing:.08em;margin-top:12px;display:none}
+.gate-saved-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+.gate-saved-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);letter-spacing:.08em;flex:1}
+.gate-clear-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:5px 10px;border-radius:2px;cursor:pointer;transition:all .15s;letter-spacing:.1em;text-transform:uppercase}
+.gate-clear-btn:hover{border-color:#C0392B;color:#FF8080}
+
+/* ── INSTALL BANNER ───────────────────────────────────────────────── */
+.install-banner{background:#1A1000;border-bottom:1px solid var(--amber-dim);padding:10px 20px;display:none;align-items:center;justify-content:space-between;gap:12px}
+.install-banner.show{display:flex}
+.install-txt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:.06em;line-height:1.5}
+.install-actions{display:flex;gap:8px;flex-shrink:0}
+.install-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:var(--amber);color:#0A0A0A;padding:7px 14px;border:none;border-radius:2px;cursor:pointer;white-space:nowrap}
+.install-dismiss{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:7px 12px;border-radius:2px;cursor:pointer;white-space:nowrap}
+
+/* ── HEADER ───────────────────────────────────────────────────────── */
+header{background:var(--panel);border-bottom:3px solid #111;padding:0 24px;display:flex;align-items:stretch;height:60px;box-shadow:0 2px 0 #0A0A0A,0 4px 0 #111;position:sticky;top:0;z-index:100}
+.brand-block{display:flex;flex-direction:column;justify-content:center;padding:0 16px 0 0;border-right:1px solid var(--border);min-width:150px}
+.brand-name{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;color:var(--amber);letter-spacing:.06em;line-height:1;text-shadow:0 0 20px rgba(245,166,35,.4)}
+.brand-sub{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--amber-dim);letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+.lcd-panel{flex:1;display:flex;align-items:center;padding:0 18px;gap:18px;border-right:1px solid var(--border)}
+.lcd-field{display:flex;flex-direction:column;gap:2px}
+.lcd-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--amber-dim);letter-spacing:.2em;text-transform:uppercase}
+.lcd-val{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--amber);letter-spacing:.06em}
+.led-block{display:flex;align-items:center;gap:7px;padding:0 16px;border-right:1px solid var(--border)}
+.led{width:7px;height:7px;border-radius:50%;background:#111;border:1px solid #2A2A2A;transition:all .3s}
+.led.on{background:var(--led);box-shadow:0 0 6px var(--led);border-color:var(--led)}
+.led.amber-led{background:var(--amber);box-shadow:0 0 6px var(--amber);border-color:var(--amber)}
+.led-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--cream2);letter-spacing:.1em}
+.header-right{display:flex;align-items:center;padding:0 0 0 14px;gap:6px}
+.hdr-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;color:var(--cream2);background:var(--panel2);border:1px solid var(--border);padding:5px 10px;border-radius:2px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s}
+.hdr-btn:hover{color:var(--amber);border-color:var(--amber-dim)}
+.hdr-btn.active{color:var(--amber);border-color:var(--amber-dim);background:#1A1000}
+
+/* ── TOAST ────────────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;z-index:2000;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:12px 20px;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,.5);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--led);color:#0A0A0A}
+.toast.warn{background:var(--amber);color:#0A0A0A}
+.toast.err2{background:#C0392B;color:#fff}
+
+/* ── HERO ─────────────────────────────────────────────────────────── */
+.hero{max-width:900px;margin:0 auto;padding:44px 24px 32px}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:32px}
+.hero-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:.24em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);flex-shrink:0;animation:breathe 2s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1;box-shadow:0 0 8px var(--amber)}50%{opacity:.3;box-shadow:none}}
+.hero-headline{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,4.5vw,48px);font-weight:600;line-height:1.05;letter-spacing:-.02em;color:var(--white);margin-bottom:10px}
+.hero-headline em{color:var(--amber);font-style:normal;text-shadow:0 0 30px rgba(245,166,35,.25)}
+.hero-body{font-size:14px;font-weight:300;line-height:1.8;color:var(--cream2);max-width:400px}
+.hero-counter{display:flex;flex-direction:column;align-items:center;gap:3px;padding:16px 22px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;border-top:2px solid var(--amber-dim);flex-shrink:0}
+.counter-val{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--amber);text-shadow:0 0 16px rgba(245,166,35,.35)}
+.counter-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--cream2);letter-spacing:.18em;text-transform:uppercase}
+
+/* ── MPC PADS ─────────────────────────────────────────────────────── */
+.mpc-section{max-width:900px;margin:0 auto;padding:0 24px 36px}
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.pad-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:16px;background:var(--panel2);border:2px solid #111;border-radius:6px;box-shadow:inset 0 2px 8px rgba(0,0,0,.5),0 4px 0 #0A0A0A}
+.pad{aspect-ratio:1;background:var(--pad);border:1px solid var(--pad-border);border-radius:4px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:7px 9px;position:relative;transition:all .1s;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 -1px 0 rgba(0,0,0,.4),0 2px 4px rgba(0,0,0,.4);user-select:none;overflow:hidden}
+.pad::before{content:'';position:absolute;inset:0;background:linear-gradient(145deg,rgba(255,255,255,.03) 0%,transparent 60%);border-radius:4px}
+.pad:active{transform:scale(.95) translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.pad.lit{background:#2A2000;border-color:var(--amber-dim);box-shadow:inset 0 0 12px rgba(245,166,35,.18),0 0 8px rgba(245,166,35,.1)}
+.pad.lit .pad-name{color:var(--amber)}
+.pad.lit .pad-led-dot{background:var(--amber);box-shadow:0 0 4px var(--amber);border-color:var(--amber)}
+.pad-num{font-family:'IBM Plex Mono',monospace;font-size:7px;color:#444;letter-spacing:.1em;position:absolute;top:6px;right:8px}
+.pad-name{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;color:var(--cream2);letter-spacing:.04em;line-height:1.3;text-transform:uppercase}
+.pad-led-dot{position:absolute;top:6px;left:6px;width:5px;height:5px;border-radius:50%;background:#111;border:1px solid #222;transition:all .2s}
+
+/* ── PROMPT MACHINE ───────────────────────────────────────────────── */
+.dig-section{max-width:900px;margin:0 auto;padding:0 24px 36px}
+.dig-machine{background:var(--panel2);border:2px solid #111;border-radius:6px;box-shadow:inset 0 2px 8px rgba(0,0,0,.4),0 4px 0 #0A0A0A;overflow:hidden}
+.dig-input-wrap{padding:16px 18px 0;border-bottom:1px solid var(--border)}
+.input-lcd-bar{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber-dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.cursor{display:inline-block;width:6px;height:10px;background:var(--amber);animation:blink-cur .8s step-end infinite;vertical-align:middle}
+@keyframes blink-cur{0%,100%{opacity:1}50%{opacity:0}}
+textarea#prompt{width:100%;background:transparent;border:none;outline:none;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:400;color:var(--amber);line-height:1.6;resize:none;padding:0 0 16px;caret-color:var(--amber);min-height:52px;text-shadow:0 0 16px rgba(245,166,35,.25)}
+textarea#prompt::placeholder{color:var(--amber-dim);opacity:1;text-shadow:none}
+.dig-controls{display:flex;align-items:center;padding:10px 18px;gap:12px;flex-wrap:wrap;background:var(--panel3)}
+.len-group{display:flex;align-items:center;gap:5px}
+.len-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.16em;text-transform:uppercase}
+.len-pad{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:var(--cream2);background:var(--pad);border:1px solid var(--pad-border);padding:5px 10px;border-radius:2px;cursor:pointer;transition:all .12s;letter-spacing:.04em}
+.len-pad:hover{border-color:var(--amber-dim);color:var(--amber)}
+.len-pad.sel{background:#2A2000;border-color:var(--amber-dim);color:var(--amber)}
+.dig-btn{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--amber);color:#0A0A0A;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 22px;border:none;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 2px 0 #7A5010}
+.dig-btn:hover{background:#FFB940;transform:translateY(-1px);box-shadow:0 3px 0 #7A5010}
+.dig-btn:active{transform:translateY(1px)}
+.dig-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.quick-row{padding:9px 18px 11px;display:flex;flex-wrap:wrap;gap:5px;border-top:1px solid var(--border)}
+.quick-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:4px 9px;border-radius:2px;cursor:pointer;transition:all .15s;letter-spacing:.04em;white-space:nowrap}
+.quick-chip:hover{border-color:var(--amber-dim);color:var(--amber)}
+
+/* ── LOADING ──────────────────────────────────────────────────────── */
+.loading-wrap{max-width:900px;margin:0 auto;padding:0 24px 28px;display:none}
+.loading-wrap.on{display:block}
+.loading-machine{background:var(--panel2);border:2px solid #111;border-radius:6px;padding:28px 24px;box-shadow:inset 0 2px 8px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.loading-lcd{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--amber);letter-spacing:.08em;text-shadow:0 0 14px rgba(245,166,35,.4);animation:flicker .12s ease-in-out infinite alternate}
+@keyframes flicker{0%{opacity:1}100%{opacity:.92}}
+.loading-waveform{display:flex;align-items:flex-end;gap:3px;height:34px}
+.lw-bar{width:4px;background:var(--amber-dim);border-radius:2px;animation:wave .8s ease-in-out infinite}
+.lw-bar:nth-child(1){height:10px;animation-delay:0s}.lw-bar:nth-child(2){height:22px;animation-delay:.08s}.lw-bar:nth-child(3){height:32px;animation-delay:.16s}.lw-bar:nth-child(4){height:18px;animation-delay:.24s}.lw-bar:nth-child(5){height:28px;animation-delay:.32s}.lw-bar:nth-child(6){height:14px;animation-delay:.40s}.lw-bar:nth-child(7){height:24px;animation-delay:.48s}.lw-bar:nth-child(8){height:10px;animation-delay:.56s}
+@keyframes wave{0%,100%{background:var(--amber-dim);transform:scaleY(.6)}50%{background:var(--amber);transform:scaleY(1)}}
+.loading-source{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.1em;text-transform:uppercase;opacity:.7}
+
+/* ── SAVED PANEL ──────────────────────────────────────────────────── */
+.saved-panel{max-width:900px;margin:0 auto;padding:0 24px 48px;display:none}
+.saved-panel.on{display:block}
+.saved-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.saved-title-txt{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--amber);letter-spacing:.14em;text-transform:uppercase}
+.clear-saved-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:5px 10px;border-radius:2px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s}
+.clear-saved-btn:hover{border-color:#C0392B;color:#FF8080}
+.saved-empty{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cream2);letter-spacing:.1em;text-align:center;padding:36px 0;opacity:.5;text-transform:uppercase}
+.saved-list{display:flex;flex-direction:column;gap:5px}
+.saved-item{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:12px 14px;display:flex;align-items:center;gap:14px;transition:all .15s}
+.saved-item:hover{border-color:var(--amber-dim)}
+.saved-item-info{flex:1;min-width:0}
+.saved-item-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-item-meta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.08em;margin-top:3px}
+.saved-item-actions{display:flex;gap:5px;flex-shrink:0}
+.saved-load-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:var(--amber);background:#1A1000;border:1px solid var(--amber-dim);padding:5px 10px;border-radius:2px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.saved-load-btn:hover{background:var(--amber);color:#0A0A0A}
+.saved-del-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:5px 8px;border-radius:2px;cursor:pointer;transition:all .15s}
+.saved-del-btn:hover{border-color:#C0392B;color:#FF8080}
+
+/* ── RESULTS ──────────────────────────────────────────────────────── */
+.results-wrap{max-width:900px;margin:0 auto;padding:0 24px 72px;display:none}
+.results-wrap.on{display:block}
+.pl-header{background:var(--panel2);border:2px solid #111;border-radius:6px;padding:18px 20px 16px;margin-bottom:3px;box-shadow:0 4px 0 #0A0A0A}
+.pl-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber);letter-spacing:.22em;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:7px}
+.pl-dot{width:5px;height:5px;border-radius:50%;background:var(--led);box-shadow:0 0 6px var(--led)}
+.pl-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:600;color:var(--white);line-height:1.1;letter-spacing:-.01em;margin-bottom:4px}
+.pl-sub{font-size:13px;font-weight:300;color:var(--cream2);line-height:1.6;margin-bottom:12px;max-width:540px}
+.pl-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pl-stat{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);letter-spacing:.1em;background:var(--panel3);border:1px solid var(--border);padding:4px 9px;border-radius:2px}
+.pl-btn-grp{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.pl-action-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:8px 14px;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px;border:none}
+.btn-amber{background:var(--amber);color:#0A0A0A;box-shadow:0 2px 0 #7A5010}
+.btn-amber:hover{background:#FFB940;transform:translateY(-1px)}
+.btn-green{background:var(--led);color:#0A0A0A;box-shadow:0 2px 0 #1A6A00}
+.btn-green:hover{background:#6EE640;transform:translateY(-1px)}
+
+/* TRACK LIST */
+.track-list{display:flex;flex-direction:column;gap:3px;margin-top:3px}
+.track-card{background:var(--panel2);border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:border-color .18s}
+.track-card:hover{border-color:var(--amber-dim)}
+.track-main-row{display:grid;grid-template-columns:40px 72px 1fr auto;align-items:stretch;min-height:72px}
+.track-num-block{display:flex;align-items:center;justify-content:center;background:var(--panel3);border-right:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cream2)}
+.track-thumb{width:72px;height:72px;background:var(--panel3);border-right:1px solid var(--border);position:relative;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.thumb-ph-icon{font-size:18px;color:var(--amber-dim)}
+.preview-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s}
+.track-thumb:hover .preview-overlay{opacity:1}
+.track-body{padding:10px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.track-title-text{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-artist-text{font-size:12px;font-weight:500;color:var(--amber)}
+.track-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.tc{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);background:var(--panel3);border:1px solid var(--border);padding:2px 6px;border-radius:2px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.tc.country{color:var(--amber);border-color:var(--amber-dim);background:#1A1000}
+.track-scores-col{display:flex;flex-direction:column;justify-content:center;gap:6px;padding:9px 13px;border-left:1px solid var(--border);min-width:106px}
+.score-row{display:flex;flex-direction:column;gap:2px}
+.score-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--cream2);letter-spacing:.14em;text-transform:uppercase}
+.score-bar-outer{height:2px;background:var(--panel3);border-radius:2px}
+.score-bar-fill{height:100%;border-radius:2px;background:var(--amber);transition:width .8s ease}
+.score-bar-fill.disc{background:var(--led)}
+.score-num{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber)}
+.score-num.disc{color:var(--led)}
+.why-toggle{display:flex;align-items:center;justify-content:space-between;padding:7px 14px 7px calc(40px + 72px + 14px);border-top:1px solid var(--border);cursor:pointer;transition:background .15s}
+.why-toggle:hover{background:rgba(245,166,35,.04)}
+.why-toggle-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber-dim);letter-spacing:.14em;text-transform:uppercase;transition:color .15s}
+.why-toggle:hover .why-toggle-label{color:var(--amber)}
+.why-caret{font-size:10px;color:var(--amber-dim);transition:transform .2s}
+.why-toggle.open .why-caret{transform:rotate(180deg)}
+.track-why-row{display:none;padding:10px 14px 12px calc(40px + 72px + 14px);font-size:12px;line-height:1.75;color:var(--cream2);font-style:italic;border-top:1px solid var(--border)}
+.track-why-row.open{display:block}
+
+.rn-block{margin-top:3px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--amber);padding:14px 16px}
+.rn-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--amber);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
+.rn-text{font-size:12px;line-height:1.75;color:var(--cream2);font-style:italic}
+.sources-row{margin-top:3px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:11px 14px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.src-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;padding-top:2px}
+.src-chips{display:flex;gap:4px;flex-wrap:wrap}
+.src-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber);letter-spacing:.06em;background:#1A1000;border:1px solid var(--amber-dim);padding:2px 7px;border-radius:2px}
+.again-row{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.ghost-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:var(--cream2);background:transparent;border:1px solid var(--border);padding:7px 13px;border-radius:2px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .15s}
+.ghost-btn:hover{border-color:var(--amber-dim);color:var(--amber)}
+
+/* ── PREVIEW MODAL ────────────────────────────────────────────────── */
+.modal-backdrop{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px}
+.modal-backdrop.on{display:flex}
+.modal-box{background:var(--panel2);border:2px solid var(--border);border-radius:6px;width:100%;max-width:580px;box-shadow:0 0 50px rgba(245,166,35,.1),0 20px 40px rgba(0,0,0,.6);overflow:hidden}
+.modal-top{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--border);background:var(--panel3)}
+.modal-title{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+.modal-close{background:transparent;border:1px solid var(--border);color:var(--cream2);font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 9px;border-radius:2px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s;flex-shrink:0;margin-left:10px}
+.modal-close:hover{border-color:var(--amber-dim);color:var(--amber)}
+.modal-body{padding:24px 22px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.modal-track-name{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;color:var(--white);line-height:1.2}
+.modal-track-artist{font-size:13px;color:var(--amber);font-weight:500}
+.modal-track-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);letter-spacing:.08em}
+.modal-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream2);letter-spacing:.05em;line-height:1.7;max-width:360px;opacity:.65}
+.modal-btn-group{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.modal-yt-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:var(--amber);color:#0A0A0A;padding:10px 20px;border-radius:3px;text-decoration:none;transition:all .15s;box-shadow:0 2px 0 #7A5010;display:inline-block}
+.modal-yt-btn:hover{background:#FFB940;transform:translateY(-1px)}
+.modal-yt-search{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:var(--cream2);padding:10px 18px;border-radius:3px;text-decoration:none;transition:all .15s;border:1px solid var(--border);display:inline-block}
+.modal-yt-search:hover{border-color:var(--amber-dim);color:var(--amber)}
+
+/* ── COPY OVERLAY ─────────────────────────────────────────────────── */
+.copy-box{background:var(--panel2);border:2px solid var(--amber-dim);border-radius:6px;width:100%;max-width:600px;overflow:hidden;box-shadow:0 0 40px rgba(245,166,35,.12)}
+.copy-box-top{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;background:var(--panel3);border-bottom:1px solid var(--border)}
+.copy-box-title{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:.16em;text-transform:uppercase}
+.copy-close{background:transparent;border:1px solid var(--border);color:var(--cream2);font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 9px;border-radius:2px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s}
+.copy-close:hover{color:var(--amber);border-color:var(--amber-dim)}
+#copyTextarea{width:100%;background:#0D0D0D;border:none;outline:none;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.9;padding:16px;resize:none;height:260px;letter-spacing:.04em}
+.copy-box-footer{padding:11px 15px;display:flex;align-items:center;gap:10px;background:var(--panel3);border-top:1px solid var(--border)}
+.copy-select-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:var(--amber);color:#0A0A0A;padding:9px 16px;border:none;border-radius:3px;cursor:pointer;transition:all .15s}
+.copy-select-btn:hover{background:#FFB940}
+.copy-hint{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--cream2);letter-spacing:.06em;flex:1;line-height:1.5}
+
+/* ── ERROR ────────────────────────────────────────────────────────── */
+.err-wrap{max-width:900px;margin:0 auto;padding:0 24px 36px;display:none}
+.err-wrap.on{display:block}
+.err-inner{padding:14px 18px;background:#1A0000;border:1px solid #5A2020;border-left:3px solid #C0392B;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#FF8080;line-height:1.7}
+
+/* ── FOOTER ───────────────────────────────────────────────────────── */
+footer{background:var(--panel);border-top:3px solid #111;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.ft-brand{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--amber);letter-spacing:.08em}
+.ft-right{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--amber-dim);letter-spacing:.14em;text-transform:uppercase}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────── */
+@media(max-width:640px){
+  header{padding:0 14px}.lcd-panel,.led-block{display:none}
+  .hero,.mpc-section,.dig-section,.results-wrap,.loading-wrap,.err-wrap,.saved-panel{padding-left:14px;padding-right:14px}
+  .hero{padding-top:28px}.pad-grid{gap:6px;padding:12px}.pad-name{font-size:7.5px}
+  .track-main-row{grid-template-columns:34px 58px 1fr}.track-thumb{width:58px;height:58px}.track-scores-col{display:none}
+  .why-toggle,.track-why-row{padding-left:calc(34px + 58px + 12px)}
+  .hero-counter{display:none}.pl-btn-grp{margin-left:0;width:100%}
+}
+@media(prefers-reduced-motion:reduce){.lw-bar,.loading-lcd,.cursor,.hero-eyebrow::before{animation:none}}
+</style>
+</head>
+<body>
+<div class="app" id="mainApp" style="display:none">
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-txt">📲 <strong style="color:var(--amber)">Add to home screen</strong> — use Bellphonic like an app every day</div>
+    <div class="install-actions">
+      <button class="install-btn" id="installBtn">Install</button>
+      <button class="install-dismiss" onclick="dismissInstall()">Later</button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand-block"><div class="brand-name">BELLPHONIC</div><div class="brand-sub">Crate Digger</div></div>
+    <div class="lcd-panel">
+      <div class="lcd-field"><div class="lcd-label">Mode</div><div class="lcd-val" id="lcdMode">STANDBY</div></div>
+      <div class="lcd-field"><div class="lcd-label">Crate</div><div class="lcd-val" id="lcdCrate">--</div></div>
+      <div class="lcd-field"><div class="lcd-label">Tracks</div><div class="lcd-val" id="lcdTracks">--</div></div>
+    </div>
+    <div class="led-block">
+      <div class="led on"></div><div class="led amber-led"></div><div class="led" id="ledPlay"></div>
+      <div class="led-label">PWR&nbsp;ACT&nbsp;PLY</div>
+    </div>
+    <div class="header-right">
+      <button class="hdr-btn" id="savedHdrBtn" onclick="toggleSavedPanel()">SAVED <span id="savedBadge"></span></button>
+      <button class="hdr-btn" onclick="openCopyOverlay()">COPY</button>
+      <button class="hdr-btn" onclick="clearAll()">CLR</button>
+      <button class="hdr-btn" onclick="showGate()" title="Change API Key">KEY</button>
+    </div>
+  </header>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-top">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Bellphonic Playlist Digger</div>
+        <h1 class="hero-headline">Every record<br/>you've been<br/><em>looking for.</em></h1>
+        <p class="hero-body">Tap a pad. Describe a vibe. Get a playlist built for people who actually listen — not the algorithm.</p>
+      </div>
+      <div class="hero-counter"><div class="counter-val" id="digCount">0</div><div class="counter-label">Playlists Built</div></div>
+    </div>
+  </section>
+
+  <!-- MPC PADS -->
+  <section class="mpc-section">
+    <div class="section-label">SELECT CRATE — TAP A PAD</div>
+    <div class="pad-grid" id="padGrid"></div>
+  </section>
+
+  <!-- PROMPT -->
+  <section class="dig-section">
+    <div class="section-label">PROMPT INPUT</div>
+    <div class="dig-machine">
+      <div class="dig-input-wrap">
+        <div class="input-lcd-bar">BELLPHONIC :: INPUT&nbsp;&nbsp;<span class="cursor"></span></div>
+        <textarea id="prompt" rows="3" placeholder="find records j dilla would have sampled…"></textarea>
+      </div>
+      <div class="dig-controls">
+        <div class="len-group">
+          <span class="len-label">TRACKS :</span>
+          <button class="len-pad sel" data-n="10">10</button>
+          <button class="len-pad" data-n="25">25</button>
+          <button class="len-pad" data-n="30">30</button>
+          <button class="len-pad" data-n="50">50</button>
+        </div>
+        <button class="dig-btn" id="digBtn" onclick="build()">► DIG IT</button>
+      </div>
+      <div class="quick-row" id="quickRow"></div>
+    </div>
+  </section>
+
+  <!-- LOADING -->
+  <div class="loading-wrap" id="loadingWrap">
+    <div class="loading-machine">
+      <div class="loading-lcd" id="loadingLcd">SEARCHING THE CRATES...</div>
+      <div class="loading-waveform">
+        <div class="lw-bar"></div><div class="lw-bar"></div><div class="lw-bar"></div>
+        <div class="lw-bar"></div><div class="lw-bar"></div><div class="lw-bar"></div>
+        <div class="lw-bar"></div><div class="lw-bar"></div>
+      </div>
+      <div class="loading-source" id="loadingSrc">CROSS-REFERENCING VINYL ARCHIVES</div>
+    </div>
+  </div>
+
+  <!-- SAVED PANEL -->
+  <div class="saved-panel" id="savedPanel">
+    <div class="saved-header">
+      <div class="saved-title-txt">▣ SAVED PLAYLISTS</div>
+      <button class="clear-saved-btn" onclick="clearAllSaved()">CLEAR ALL</button>
+    </div>
+    <div id="savedList"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-wrap" id="resultsWrap"></div>
+
+  <!-- ERROR -->
+  <div class="err-wrap" id="errWrap"><div class="err-inner" id="errInner"></div></div>
+
+  <!-- PREVIEW MODAL -->
+  <div class="modal-backdrop" id="previewModal" onclick="handleModalClick(event,'previewModal')">
+    <div class="modal-box">
+      <div class="modal-top">
+        <div class="modal-title" id="previewTitle">—</div>
+        <button class="modal-close" onclick="closeModal('previewModal')">✕ CLOSE</button>
+      </div>
+      <div class="modal-body">
+        <div><div class="modal-track-name" id="previewTrackName">—</div><div class="modal-track-artist" id="previewTrackArtist">—</div><div class="modal-track-meta" id="previewTrackMeta">—</div></div>
+        <div class="modal-hint">YouTube blocks direct embeds for most rare vinyl rips.<br/>Choose how you want to find this track:</div>
+        <div class="modal-btn-group">
+          <a class="modal-yt-btn" id="prevYtBtn" href="#" target="_blank" rel="noopener">▶ SEARCH YOUTUBE</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COPY OVERLAY -->
+  <div class="modal-backdrop" id="copyOverlay" onclick="handleModalClick(event,'copyOverlay')">
+    <div class="copy-box">
+      <div class="copy-box-top">
+        <div class="copy-box-title">▣ COPY PLAYLIST</div>
+        <button class="copy-close" onclick="closeModal('copyOverlay')">✕ CLOSE</button>
+      </div>
+      <textarea id="copyTextarea" readonly></textarea>
+      <div class="copy-box-footer">
+        <button class="copy-select-btn" onclick="selectAndCopy()">SELECT ALL & COPY</button>
+        <div class="copy-hint">Paste into Notes, Apple Music, Spotify search, or anywhere you keep records.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="ft-brand">BELLPHONIC</div>
+    <div class="ft-right">Unquantized. On Purpose. — Bell Frequency © 2026 — ⌘+Enter to dig</div>
+  </footer>
+</div>
+
+<!-- API KEY GATE -->
+<div class="api-gate" id="apiGate">
+  <div class="api-gate-box">
+    <div class="gate-logo">BELLPHONIC</div>
+    <div class="gate-sub">Crate Digger — Setup</div>
+    <span class="gate-label">Your Anthropic API Key</span>
+    <input type="password" class="gate-input" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false"/>
+    <div class="gate-note">
+      Your key is stored only in your browser — never sent anywhere except directly to Anthropic.<br/><br/>
+      Get a free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys → Create Key.<br/>
+      You'll need a small amount of credit ($5 gets you hundreds of playlists).
+    </div>
+    <button class="gate-btn" onclick="submitKey()">UNLOCK BELLPHONIC ►</button>
+    <div class="gate-error" id="gateError"></div>
+    <div class="gate-saved-row" id="gateSavedRow" style="display:none">
+      <div class="gate-saved-label">✓ Key saved in browser</div>
+      <button class="gate-clear-btn" onclick="clearKey()">CLEAR KEY</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const CRATES=[
+  {label:"RARE GOSPEL",    prompt:"Build the ultimate rare gospel playlist — obscure Savoy, Nashboro, Peacock, self-pressed 45s. Sacred and sampleable."},
+  {label:"RARE SOUL",      prompt:"Find forgotten soul masterpieces — 45s and B-sides from regional labels most people never heard. Devastating performances."},
+  {label:"SAMPLE SOURCES", prompt:"The best sample-rich records for producers — incredible intros, drum breaks, Rhodes, strings, choirs, flutes."},
+  {label:"J DILLA",        prompt:"Find records J Dilla would have loved — warm, off-kilter, soulful, incredible grooves and deep sample potential."},
+  {label:"MF DOOM",        prompt:"Build a playlist MF DOOM would sample — cinematic, jazzy, obscure, dark textures and unexpected beauty."},
+  {label:"DEEP R&B",       prompt:"Hidden R&B gems from the 60s through 90s — emotional, raw, rarely heard outside collector circles."},
+  {label:"BOSSA NOVA",     prompt:"The greatest bossa nova ever recorded — rare Elenco pressings, João Gilberto deep cuts, forgotten MPB composers."},
+  {label:"SPIRITUAL JAZZ", prompt:"Spirit jazz and devotional recordings — Pharoah Sanders, Alice Coltrane, records that feel like prayers."},
+  {label:"ITALIAN FILM",   prompt:"Rare Italian film scores and library music — Morricone deep cuts, Piero Umiliani, Bruno Nicolai. Sampleable."},
+  {label:"AFRICAN FUNK",   prompt:"The greatest African funk — Fela deep cuts, afrobeat, highlife, Ethiopian jazz, rare pressings."},
+  {label:"LIBRARY MUSIC",  prompt:"Rare library and production music — unusual, cinematic, experimental, and incredibly sampleable."},
+  {label:"JAPANESE JAZZ",  prompt:"The best Japanese jazz ever recorded — rare 70s and 80s pressings, beautiful arrangements."},
+  {label:"PROD CRATES",    prompt:"A producer's dream crate — records with exceptional drum breaks, chord progressions, and sample material."},
+  {label:"HIP-HOP DNA",    prompt:"Records that defined hip-hop culture — sample sources used by Pete Rock, Premier, Dilla, Madlib, RZA, 9th Wonder."},
+  {label:"CINEMATIC",      prompt:"Cinematic noir soundtracks and atmospheric records — tense, beautiful, perfect for late night."},
+  {label:"SUNDAY MORNING", prompt:"The perfect Sunday morning playlist — gospel-soul, spiritual, warm, hopeful, deeply human."},
+];
+const QUICK=["show me forgotten soul 45s","records with incredible string arrangements","late night jazz for producers","rare bossa nova deep cuts","what questlove plays at 2am","luxury dinner party soundtrack","world music that feels spiritual","sample-ready drum breaks and intros"];
+const LCD_PHRASES=["SEARCHING THE CRATES...","DIGGING THROUGH VINYL ARCHIVES...","CONSULTING THE LINER NOTES...","CROSS-REFERENCING DJ TRACKLISTS...","SCANNING MUSIC BLOGS & FORUMS...","PULLING FROM COLLECTOR DATABASES...","TRACING MUSICAL LINEAGES...","SURFACING HIDDEN GEMS...","READING THE WAX..."];
+const SRC_PHRASES=["CROSS-REFERENCING VINYL ARCHIVES","READING WAX POETICS · PITCHFORK · ALLMUSIC","CHECKING DISCOGS COMMUNITY · RATE YOUR MUSIC","SCANNING DJ TRACKLISTS · BBC R6 · NTS RADIO","CONSULTING WHOSAMPLED · HISTORICAL CHARTS","TRACING GILLES PETERSON · QUESTLOVE SETS"];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let apiKey='', selectedLen=10, lastPrompt='', lastData=null, loadInterval=null;
+let digCount=parseInt(lsGet('bph_count')||'0');
+let savedPlaylists=JSON.parse(lsGet('bph_saved')||'[]');
+let showingSaved=false, deferredInstall=null;
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+// ── API KEY GATE ──────────────────────────────────────────────────────────────
+function initGate(){
+  const saved=lsGet('bph_key');
+  if(saved){
+    apiKey=saved;
+    document.getElementById('gateSavedRow').style.display='flex';
+    document.getElementById('apiKeyInput').value=saved;
+  }
+  // If key exists, go straight in
+  if(saved){enterApp();} else {document.getElementById('apiGate').style.display='flex';}
+}
+function submitKey(){
+  const val=document.getElementById('apiKeyInput').value.trim();
+  const err=document.getElementById('gateError');
+  if(!val||!val.startsWith('sk-ant')){
+    err.textContent='Please enter a valid Anthropic API key (starts with sk-ant…)';
+    err.style.display='block';return;
+  }
+  err.style.display='none';
+  apiKey=val;
+  lsSet('bph_key',val);
+  enterApp();
+}
+function enterApp(){
+  document.getElementById('apiGate').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  initApp();
+}
+function showGate(){
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('apiGate').style.display='flex';
+  if(apiKey){document.getElementById('gateSavedRow').style.display='flex';}
+}
+function clearKey(){
+  lsSet('bph_key','');apiKey='';
+  document.getElementById('apiKeyInput').value='';
+  document.getElementById('gateSavedRow').style.display='none';
+  showToast('KEY CLEARED','warn');
+}
+document.getElementById('apiKeyInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitKey();});
+
+// ── PWA ───────────────────────────────────────────────────────────────────────
+const manifestData={name:"Bellphonic Crate Digger",short_name:"Bellphonic",description:"Crate digging at the tap of a button.",start_url:"./",display:"standalone",background_color:"#1A1A1A",theme_color:"#1A1A1A",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%231A1A1A'/><text y='140' x='20' font-size='130'>🎛</text></svg>",sizes:"192x192",type:"image/svg+xml"}]};
+try{const b=new Blob([JSON.stringify(manifestData)],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('link');l.rel='manifest';l.href=u;document.head.appendChild(l);}catch(e){}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(!lsGet('bph_install_dismissed')){document.getElementById('installBanner').classList.add('show');}});
+document.getElementById('installBtn').onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();const{outcome}=await deferredInstall.userChoice;deferredInstall=null;document.getElementById('installBanner').classList.remove('show');if(outcome==='accepted')showToast('✓ BELLPHONIC INSTALLED','ok');};
+function dismissInstall(){document.getElementById('installBanner').classList.remove('show');lsSet('bph_install_dismissed','1');}
+const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone;
+if(isIos&&!lsGet('bph_ios_hint')){setTimeout(()=>{const b=document.getElementById('installBanner');if(b){b.querySelector('.install-txt').innerHTML='📲 On iPhone: tap <strong style="color:var(--amber)">Share</strong> → <strong style="color:var(--amber)">Add to Home Screen</strong> to use Bellphonic every day like an app.';b.querySelector('#installBtn').style.display='none';b.classList.add('show');lsSet('bph_ios_hint','1');}},3000);}
+
+// ── INIT APP ──────────────────────────────────────────────────────────────────
+function initApp(){
+  document.getElementById('digCount').textContent=digCount;
+  updateSavedBadge();
+  const grid=document.getElementById('padGrid');
+  grid.innerHTML='';
+  CRATES.forEach((c,i)=>{
+    const pad=document.createElement('div');pad.className='pad';
+    pad.innerHTML=`<div class="pad-led-dot"></div><div class="pad-num">${String(i+1).padStart(2,'0')}</div><div class="pad-name">${c.label}</div>`;
+    pad.onclick=()=>{
+      document.querySelectorAll('.pad').forEach(p=>p.classList.remove('lit'));
+      pad.classList.add('lit');
+      document.getElementById('prompt').value=c.prompt;
+      document.getElementById('lcdCrate').textContent=c.label.slice(0,12);
+      document.getElementById('lcdMode').textContent='READY';
+      if(showingSaved)toggleSavedPanel();
+    };
+    grid.appendChild(pad);
+  });
+  const qr=document.getElementById('quickRow');qr.innerHTML='';
+  QUICK.forEach(q=>{const btn=document.createElement('button');btn.className='quick-chip';btn.textContent=q;btn.onclick=()=>{document.getElementById('prompt').value=q;document.getElementById('prompt').focus();};qr.appendChild(btn);});
+  document.querySelectorAll('.len-pad').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('.len-pad').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');selectedLen=parseInt(btn.dataset.n);document.getElementById('lcdTracks').textContent=btn.dataset.n;};});
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ── BUILD ─────────────────────────────────────────────────────────────────────
+async function build(){
+  const prompt=document.getElementById('prompt').value.trim();
+  if(!prompt){document.getElementById('prompt').focus();return;}
+  lastPrompt=prompt;
+  const btn=document.getElementById('digBtn');
+  btn.disabled=true;btn.textContent='▶ DIGGING...';
+  document.getElementById('lcdMode').textContent='DIGGING';
+  document.getElementById('ledPlay').classList.add('on');
+  document.getElementById('loadingWrap').classList.add('on');
+  document.getElementById('resultsWrap').classList.remove('on');
+  document.getElementById('resultsWrap').innerHTML='';
+  document.getElementById('errWrap').classList.remove('on');
+  if(showingSaved)toggleSavedPanel();
+  let pi=0,si=0;
+  document.getElementById('loadingLcd').textContent=LCD_PHRASES[0];
+  document.getElementById('loadingSrc').textContent=SRC_PHRASES[0];
+  loadInterval=setInterval(()=>{pi=(pi+1)%LCD_PHRASES.length;si=(si+1)%SRC_PHRASES.length;document.getElementById('loadingLcd').textContent=LCD_PHRASES[pi];document.getElementById('loadingSrc').textContent=SRC_PHRASES[si];},2000);
+  try{
+    const data=await callClaude(prompt,selectedLen);
+    lastData=data;digCount++;lsSet('bph_count',String(digCount));
+    document.getElementById('digCount').textContent=digCount;
+    renderResults(data);
+  }catch(e){showErr(e.message||'Something went wrong. Try again.');}
+  finally{
+    clearInterval(loadInterval);btn.disabled=false;btn.textContent='► DIG IT';
+    document.getElementById('loadingWrap').classList.remove('on');
+    document.getElementById('lcdMode').textContent='DONE';
+    document.getElementById('ledPlay').classList.remove('on');
+  }
+}
+
+// ── CLAUDE API — with browser CORS header ─────────────────────────────────────
+async function callClaude(userPrompt,count){
+  const sys=`You are Bellphonic — a music researcher for serious diggers: producers, DJs, beatmakers, crate diggers, and sampleheads. Encyclopedic knowledge of soul, gospel, R&B, funk, hip-hop, jazz, bossa nova, MPB, afrobeat, reggae, Italian library and film music, French soundtracks, Japanese jazz, African music, Caribbean grooves, cinematic orchestral, and global music. You know Blue Note, Stax, Motown, Impulse!, Atlantic, Chess, Savoy, Peacock, Nashboro, Elenco, Odeon, ECM, CTI, Prestige, Philips, Numero Group, Light in the Attic, and hundreds more. Think like Dilla, Madlib, Pete Rock, and Questlove.
+RULES: 1) Quality over popularity. 2) EXACTLY ${count} tracks. 3) Sequence intentionally by mood/energy/arc. 4) Every "why" must be specific and producer-aware — name the instrument, the producer, the moment. 5) ONLY valid JSON, no markdown, no text before or after.
+JSON: {"playlistTitle":"title","playlistSubtitle":"one sentence arc","totalRuntime":"e.g. 58 minutes","researchNote":"2-3 sentences for a serious digger","sources":["6-8 specific sources"],"tracks":[{"position":1,"title":"","artist":"","year":"","label":"","genre":"","country":"","energy":6,"discoveryScore":85,"why":"specific note","youtubeSearch":"Artist Title Year"}]}
+energy:1-10, discoveryScore:1-100 (100=extremely rare)`;
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-calls':'true'
+    },
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:6000,system:sys,messages:[{role:'user',content:userPrompt}]})
+  });
+  if(!resp.ok){
+    const e=await resp.json().catch(()=>({}));
+    const msg=e.error?.message||`Error ${resp.status}`;
+    if(resp.status===401){throw new Error('Invalid API key. Click KEY in the header to update it.');}
+    throw new Error(msg);
+  }
+  const data=await resp.json();
+  const raw=data.content?.[0]?.text||'';
+  const cleaned=raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  try{return JSON.parse(cleaned);}catch(e){throw new Error('Unexpected response format. Try again.');}
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderResults(data){
+  const wrap=document.getElementById('resultsWrap');wrap.innerHTML='';
+  window._tracks=data.tracks||[];
+  document.getElementById('lcdTracks').textContent=(data.tracks||[]).length;
+  document.getElementById('lcdCrate').textContent=(data.playlistTitle||'').slice(0,14);
+  const hdr=document.createElement('div');hdr.className='pl-header';
+  hdr.innerHTML=`<div class="pl-eyebrow"><div class="pl-dot"></div>PLAYLIST LOADED</div><div class="pl-title">${esc(data.playlistTitle||'Untitled')}</div><div class="pl-sub">${esc(data.playlistSubtitle||'')}</div><div class="pl-actions"><div class="pl-stat">${(data.tracks||[]).length} TRACKS</div><div class="pl-stat">${esc(data.totalRuntime||'—')}</div><div class="pl-btn-grp"><button class="pl-action-btn btn-green" onclick="saveCurrentPlaylist()">✓ SAVE</button><button class="pl-action-btn btn-amber" onclick="openCopyOverlay()">⊞ COPY ALL</button></div></div>`;
+  wrap.appendChild(hdr);
+  const list=document.createElement('div');list.className='track-list';
+  (data.tracks||[]).forEach((t,i)=>{
+    const eW=Math.round((t.energy||5)/10*100),dW=Math.min(100,t.discoveryScore||50);
+    const ytQ=encodeURIComponent(t.youtubeSearch||`${t.artist} ${t.title}`);
+    const card=document.createElement('div');card.className='track-card';
+    card.innerHTML=`<div class="track-main-row"><div class="track-num-block">${t.position||i+1}</div><div class="track-thumb" onclick="openPreview(${i})"><div class="thumb-ph-icon">♪</div><div class="preview-overlay"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.5" stroke="#F5A623" stroke-width="1.5"/><path d="M10 8L16 12L10 16V8Z" fill="#F5A623"/></svg></div></div><div class="track-body"><div class="track-title-text">${esc(t.title)}</div><div class="track-artist-text">${esc(t.artist)}</div><div class="track-chips">${t.year?`<span class="tc">${esc(t.year)}</span>`:''}${t.label?`<span class="tc">${esc(t.label)}</span>`:''}${t.genre?`<span class="tc">${esc(t.genre)}</span>`:''}${t.country?`<span class="tc country">${esc(t.country)}</span>`:''}</div></div><div class="track-scores-col"><div class="score-row"><div class="score-lbl">ENERGY</div><div class="score-bar-outer"><div class="score-bar-fill" style="width:${eW}%"></div></div><div class="score-num">${t.energy||'—'}/10</div></div><div class="score-row"><div class="score-lbl">DISCOVERY</div><div class="score-bar-outer"><div class="score-bar-fill disc" style="width:${dW}%"></div></div><div class="score-num disc">${t.discoveryScore||'—'}</div></div></div></div>${t.why?`<div class="why-toggle" onclick="toggleWhy(this)"><div class="why-toggle-label">WHY THIS RECORD</div><div class="why-caret">▾</div></div><div class="track-why-row">${esc(t.why)}</div>`:''}`;
+    list.appendChild(card);
+  });
+  wrap.appendChild(list);
+  if(data.researchNote){const rn=document.createElement('div');rn.className='rn-block';rn.innerHTML=`<div class="rn-eyebrow">RESEARCHER'S NOTE</div><div class="rn-text">${esc(data.researchNote)}</div>`;wrap.appendChild(rn);}
+  if(data.sources?.length){const sr=document.createElement('div');sr.className='sources-row';sr.innerHTML=`<div class="src-lbl">SOURCED FROM</div><div class="src-chips">${data.sources.map(s=>`<span class="src-chip">${esc(s)}</span>`).join('')}</div>`;wrap.appendChild(sr);}
+  const ar=document.createElement('div');ar.className='again-row';
+  ar.innerHTML=`<button class="ghost-btn" onclick="goDeeper()">DIG DEEPER</button><button class="ghost-btn" onclick="refine()">REFINE</button><button class="ghost-btn" onclick="clearAll()">CLEAR</button>`;
+  wrap.appendChild(ar);
+  wrap.classList.add('on');
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function toggleWhy(el){const wr=el.nextElementSibling;if(!wr)return;const o=wr.classList.toggle('open');el.classList.toggle('open',o);}
+
+// ── PREVIEW ───────────────────────────────────────────────────────────────────
+function openPreview(idx){
+  const t=(window._tracks||[])[idx];if(!t)return;
+  const ytQ=encodeURIComponent(t.youtubeSearch||`${t.artist} ${t.title}`);
+  document.getElementById('previewTitle').textContent=`${t.artist} — ${t.title}`;
+  document.getElementById('previewTrackName').textContent=t.title;
+  document.getElementById('previewTrackArtist').textContent=t.artist;
+  document.getElementById('previewTrackMeta').textContent=`${t.year||'—'} · ${t.label||'—'} · ${t.genre||'—'} · ${t.country||'—'}`;
+  document.getElementById('prevYtBtn').href=`https://www.youtube.com/results?search_query=${ytQ}`;
+  openModal('previewModal');
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('on');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('on');document.body.style.overflow='';}
+function handleModalClick(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+// ── COPY ──────────────────────────────────────────────────────────────────────
+function buildCopyText(){
+  if(!lastData)return'No playlist loaded yet. Build one first.';
+  return[`BELLPHONIC — ${lastData.playlistTitle}`,lastData.playlistSubtitle||'',`${(lastData.tracks||[]).length} tracks · ${lastData.totalRuntime||''}`,'',...(lastData.tracks||[]).map(t=>`${t.position}. ${t.artist} — "${t.title}" (${t.year||'—'}) [${t.label||'—'}]`),'','— Built by Bellphonic / Bell Frequency'].join('\n');
+}
+function openCopyOverlay(){document.getElementById('copyTextarea').value=buildCopyText();openModal('copyOverlay');setTimeout(()=>{const ta=document.getElementById('copyTextarea');ta.select();ta.setSelectionRange(0,999999);},150);}
+function closeCopyOverlay(){closeModal('copyOverlay');}
+function selectAndCopy(){
+  const ta=document.getElementById('copyTextarea');
+  ta.select();ta.setSelectionRange(0,999999);
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(ta.value).then(()=>showToast('✓ COPIED TO CLIPBOARD','ok')).catch(()=>fallbackCopy(ta));
+  }else{fallbackCopy(ta);}
+}
+function fallbackCopy(ta){
+  try{document.execCommand('copy');showToast('✓ COPIED','ok');}
+  catch(e){showToast('PRESS ⌘C / CTRL+C TO COPY','warn');}
+}
+
+// ── SAVE PLAYLISTS ────────────────────────────────────────────────────────────
+function saveCurrentPlaylist(){
+  if(!lastData)return;
+  const entry={id:Date.now(),title:lastData.playlistTitle,subtitle:lastData.playlistSubtitle,tracks:lastData.tracks?.length||0,runtime:lastData.totalRuntime||'',prompt:lastPrompt,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),data:lastData};
+  savedPlaylists.unshift(entry);
+  if(savedPlaylists.length>50)savedPlaylists=savedPlaylists.slice(0,50);
+  lsSet('bph_saved',JSON.stringify(savedPlaylists));
+  updateSavedBadge();
+  showToast(`✓ SAVED: ${entry.title.slice(0,28)}`,'ok');
+}
+function updateSavedBadge(){const b=document.getElementById('savedBadge');if(b)b.textContent=savedPlaylists.length>0?`(${savedPlaylists.length})`:''}
+function toggleSavedPanel(){
+  showingSaved=!showingSaved;
+  document.getElementById('savedPanel').classList.toggle('on',showingSaved);
+  document.getElementById('savedHdrBtn').classList.toggle('active',showingSaved);
+  if(showingSaved){renderSavedPanel();document.getElementById('savedPanel').scrollIntoView({behavior:'smooth',block:'start'});}
+}
+function renderSavedPanel(){
+  const list=document.getElementById('savedList');
+  if(!savedPlaylists.length){list.innerHTML='<div class="saved-empty">No saved playlists yet.<br/>Build one and hit SAVE.</div>';return;}
+  const wrap=document.createElement('div');wrap.className='saved-list';
+  savedPlaylists.forEach((e,i)=>{
+    const item=document.createElement('div');item.className='saved-item';
+    item.innerHTML=`<div class="saved-item-info"><div class="saved-item-title">${esc(e.title)}</div><div class="saved-item-meta">${e.tracks} TRACKS · ${esc(e.runtime)} · ${esc(e.date)}</div></div><div class="saved-item-actions"><button class="saved-load-btn" onclick="loadSaved(${i})">▶ LOAD</button><button class="saved-del-btn" onclick="deleteSaved(${i})">✕</button></div>`;
+    wrap.appendChild(item);
+  });
+  list.innerHTML='';list.appendChild(wrap);
+}
+function loadSaved(i){const e=savedPlaylists[i];if(!e)return;lastData=e.data;lastPrompt=e.prompt||e.title;document.getElementById('prompt').value=lastPrompt;if(showingSaved)toggleSavedPanel();renderResults(e.data);showToast(`▶ LOADED: ${e.title.slice(0,24)}`,'ok');}
+function deleteSaved(i){savedPlaylists.splice(i,1);lsSet('bph_saved',JSON.stringify(savedPlaylists));updateSavedBadge();renderSavedPanel();}
+function clearAllSaved(){savedPlaylists=[];lsSet('bph_saved','[]');updateSavedBadge();renderSavedPanel();showToast('SAVED PLAYLISTS CLEARED','warn');}
+
+// ── MISC ──────────────────────────────────────────────────────────────────────
+function goDeeper(){document.getElementById('prompt').value=`${lastPrompt} — go significantly more obscure. Remove anything on mainstream streaming playlists. Focus on B-sides, import pressings, regional 45s, and records known only to serious collectors.`;build();}
+function refine(){document.getElementById('prompt').value=`${lastPrompt} — refine the sequence. Improve the emotional arc, replace predictable tracks with deeper cuts, add more geographic diversity.`;build();}
+function clearAll(){document.getElementById('prompt').value='';document.getElementById('resultsWrap').classList.remove('on');document.getElementById('resultsWrap').innerHTML='';document.getElementById('errWrap').classList.remove('on');document.querySelectorAll('.pad').forEach(p=>p.classList.remove('lit'));if(showingSaved)toggleSavedPanel();document.getElementById('lcdMode').textContent='STANDBY';document.getElementById('lcdCrate').textContent='--';window.scrollTo({top:0,behavior:'smooth'});}
+function showErr(msg){document.getElementById('errInner').textContent=`ERROR :: ${msg}`;document.getElementById('errWrap').classList.add('on');document.getElementById('lcdMode').textContent='ERROR';}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();build();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('previewModal');closeModal('copyOverlay');}});
+
+// START
+initGate();
+</script>
+</body>
+</html>
